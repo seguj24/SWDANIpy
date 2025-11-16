@@ -1,0 +1,57 @@
+class ForwardException(Exception):
+    """
+    Exception raised when a user-provided forward function raises an error
+    """
+    def __init__(self, original_exc):
+        self.message = "error occurred when running the forward function - " + (
+            original_exc.message
+            if hasattr(original_exc, "message")
+            else f"{type(original_exc).__name__}: {str(original_exc)}"
+        )
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
+
+class InitException(Exception):
+    """
+    Exception raised when users try to access a certain field that hasn't been
+    intialized yet
+    """
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
+
+class UserFunctionException(Exception):
+    """Exception raised when a user-provided function raises an exception"""
+
+    def __init__(self, original_exc):
+        self.message = "error occurred when running the user-provided function - " + (
+            original_exc.message
+            if hasattr(original_exc, "message")
+            else f"{type(original_exc).__name__}: {str(original_exc)}"
+        )
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
+
+class OutOfDomainException(Exception):
+    """Exception raised when a position-dependent prior is evaluated at a position
+    outside of the specified domain"""
+
+    def __init__(self, variable_name, x):
+        self.variable_name = variable_name
+        self.x = x
+        
+    def __str__(self):
+        return (
+            f"the position-dependent prior '{self.variable_name}' was evaluated at "
+            f"a position ({self.x}) outside of the domain specific earlier"
+        )
