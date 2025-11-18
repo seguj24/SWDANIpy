@@ -17,24 +17,30 @@ d_def = '/home/seguuu/Project/02_Bayesian_inversion/BayesBay_TEST/code_utils'
 sys.path.append(f"{d_def}")
 
 from conv_property import vs2vp, vp2rho
+import numpy as np
 
 
-
-def forward_PVswd(state, dperi, wave='rayleigh', mode=0):
+def forward_PVswd(state, dperi, static_property=True, wave='rayleigh', mode=0):
     voronoi = state["voronoi"]
     voronoi_sites = voronoi["discretization"]
     thk = Voronoi1D.compute_cell_extents(voronoi_sites)
     vs = voronoi["vs"]
-    vp = vs2vp(vs)
-    rho = vp2rho(vp)
+    if static_property:
+        vpvs= np.array([1.75]*len(vs))
+        vp = vpvs/vs
+        rho = np.array([2.0]*len(vs))
+    else:
+        vp = vs2vp(vs)
+        rho = vp2rho(vp)
+    # Ref. "./conv_property.py"
 
     pd = PhaseDispersion(thk, vp, vs, rho)
-    d_pred = pd(dperi, mode=mode, wave=wave).velocity
+    pv_pred = pd(dperi, mode=mode, wave=wave).velocity
     
-    return d_pred
+    return pv_pred
 
 
-def forward_GVswd(state, dperi, wave='rayleigh', mode=0):
+def forward_GVswd(state, dperi, static_property=True, wave='rayleigh', mode=0):
     """
     dperi: 주기[s] 배열
     wave : 'rayleigh' 또는 'love'
@@ -43,21 +49,32 @@ def forward_GVswd(state, dperi, wave='rayleigh', mode=0):
     voronoi_sites = voronoi["discretization"]
     thk = Voronoi1D.compute_cell_extents(voronoi_sites)
     vs = voronoi["vs"]
-    vp = vs2vp(vs)
-    rho = vp2rho(vp)
+    if static_property:
+        vpvs= np.array([1.75]*len(vs))
+        vp = vpvs/vs
+        rho = np.array([2.0]*len(vs))
+    else:
+        vp = vs2vp(vs)
+        rho = vp2rho(vp)
 
     gd = GroupDispersion(thk, vp, vs, rho)
-    g_pred = gd(dperi, mode=mode, wave=wave).velocity  # [same units as disba 반환]
-    return g_pred
+    gv_pred = gd(dperi, mode=mode, wave=wave).velocity  # [same units as disba 반환]
+    return gv_pred
 
 
-def forward_ell(state, dperi, wave='rayleigh', mode=0):
+def forward_ell(state, dperi, static_property=True, wave='rayleigh', mode=0):
     voronoi = state["voronoi"]
     voronoi_sites = voronoi["discretization"]
     thk = Voronoi1D.compute_cell_extents(voronoi_sites)
     vs = voronoi["vs"]
-    vp = vs2vp(vs)
-    rho = vp2rho(vp)
+    if static_property:
+        vpvs= np.array([1.75]*len(vs))
+        vp = vpvs/vs
+        rho = np.array([2.0]*len(vs))
+    else:
+        vp = vs2vp(vs)
+        rho = vp2rho(vp)
+
     
     ell = Ellipticity(thk, vp, vs, rho, algorithm='dunkin', dc=0.005)
     """
@@ -71,8 +88,10 @@ def forward_ell(state, dperi, wave='rayleigh', mode=0):
     ’fast-delta’: fast delta matrix (after Buchen and Ben-Hador, 1996).
     dc (scalar, optional, default 0.005) – Phase velocity increment for root finding.
     """
-    d_pred = ell(dperi, mode=mode).ellipticity
-    return d_pred
+    el_pred = ell(dperi, mode=mode).ellipticity
+    print("LEN dperi:", len(dperi), "LEN d_pred:", len(el_pred))
+
+    return el_pred
 
 
 

@@ -26,11 +26,16 @@ from likelihood import Hi_loglike, _get_target_forward
 # from init_param import init_voro
 from custom_prior import custom_prior_vs
 
+import time, os
+starttime = time.time()
+print(f">>> Start time : {time.ctime(starttime)}")
+
 ####################
 # Read Par file
 ####################
-par = read_par("./Par")
-# dict_keys(['Nchain', 'mcmc', 'priors', 'weights', 'datasets'])
+par = read_par("./Par", static_property=True)
+# Ref. "./code_utils/read_par.py"
+# dict_keys(['Nchain', 'mcmc', 'Sampler', 'priors', 'weights', 'datasets'])
 
 Ncore = int(par["Nchain"])
 burnin, sample, skip = int(par["mcmc"]["burnin"]), int(par["mcmc"]["sample"]), int(par["mcmc"]["skip"])
@@ -42,17 +47,20 @@ datasets = par["datasets"]
 
 Ndat = int(len(datasets))
 
-sampler_type = "PT" #"PT"
+sampler_type = par["sampler"]
 # PT: Parallel Tempreing
 # SA: Simulated Annealing
 # None: None
+
 if Ncore == 1 and sampler_type == "PT":
     print(f">>> Chains={Ncore}, Sampler={sampler_type}")
     print(">>> Parallel Tempering needs >1 chain.")
     print(">>> Switching to Simulated Annealing.")  
 
 custom_logL = False    
-custum_prior = True
+# Ref. "./code_utils/likelihood.py"
+custum_prior = False
+# Ref. "./code_utils/custom_prior.py"
 
 ####################
 # parameterization
@@ -65,14 +73,45 @@ vsmin, vsmax, dvs = priors["vs"]
 vs_transd = transd["vs"]         # ! 이 VS_TRANSD가 적절한건지 확인할 필요 있음.
 nvmin, nvmax = priors["nvoro"]
 rand_seed, rand_rmul = priors["rand"]
-w0, w1, dw = beta   # prior range / perturb 로 해석
+w0, w1, dw = beta
 
+
+os.makedirs("./OUT", exist_ok=True)
+logfile = "./OUT/Par.log"
+log = open(logfile, "w")
+
+def both(*args, **kwargs):
+    print(*args, **kwargs)
+    print(*args, **kwargs, file=log)
+
+both("### PARAMETERS ###")
+both(f"Ncore                    : {Ncore}")
+both(f"Sampler                  : {sampler_type}")
+both(f"Burnin                   : {burnin}")
+both(f"Sample                   : {sample}")
+both(f"Skip                     : {skip}")
+both(f"No.Data                  : {Ndat}")
+for i, ds in enumerate(datasets, 1):
+    both(f"  [{i:02d}] {ds['type']}             : {ds['file']}")
     
+both("\n### Priors ###")
+both(f"Depth (zmin, zmax, dz)   : {zmin}, {zmax}, {dz}")
+both(f"Vs (vsmin, vsmax, dvs)   : {vsmin}, {vsmax}, {dvs}")
+both(f"Vs transD                : {vs_transd}")
+both(f"No.Layer (nvmin, nvmax)  : {nvmin}, {nvmax}")
+both(f"Rand (seed, rmul)        : {rand_seed}, {rand_rmul}")
+
+both("\n### Weights ###")
+both(f"w0, w1, dw               : {w0}, {w1}, {dw}")
+
+log.close()
+
+
 ###################
 # Custom prior
 ###################
 if custum_prior:
-    vs_prior = custom_prior_vs(zmin, zmax, vsmin,vsmax, vs_transd)
+    vs_prior = custom_prior_vs(zmin, zmax, vsmin, vsmax, vs_transd)
 else:
     vs_prior = UniformPrior(
         name="vs",
@@ -85,7 +124,7 @@ voronoi = Voronoi1D(
     name="voronoi",
     vmin=zmin,
     vmax=zmax,
-    perturb_std=dz,         # 층 경계 이동 범위 관련
+    perturb_std=dz,
     n_dimensions=None,
     n_dimensions_min=int(nvmin),
     n_dimensions_max=int(nvmax),
@@ -141,7 +180,6 @@ elif sampler_type == "SA":
 else:
     sampler = None
     
-    
 ###################
 # Inversion
 ###################
@@ -160,16 +198,26 @@ inversion.run(
     )
 
 
+
+endtime = time.time()
+print(f">>> End time   : {time.ctime(endtime)}")
+
+duration = endtime - starttime
+hours = int(duration // 3600)
+minutes = int((duration % 3600) // 60)
+seconds = int(duration % 60)
+print(f">>> Duration   : {hours:02d}:{minutes:02d}:{seconds:02d}")
+
+
 ####################
 # Save results
 ####################
 import pickle, os
+print(">>> DATA SAVING")
 results = inversion.get_results(concatenate_chains=False)
 
 os.makedirs("./OUT", exist_ok=True)
 with open("./OUT/results.pkl", "wb") as f:
     pickle.dump(results, f)
-
-
-
-
+# os.system(f"cp ./Par ./OUT/Par")
+# 

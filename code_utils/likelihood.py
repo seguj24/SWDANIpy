@@ -20,9 +20,9 @@ def _get_target_forward(datasets, weight):
     for ds in datasets:
         name   = ds["type"]      # 예: 'RPV01', 'RGV01', ...
         obs0   = ds["obs"]
-        var0   = ds["var"]
+        # var0   = ds["var"]
         forward = ds["forward"]  # forward 계산 식; read_pard 참고
-        C   = ds["dcov"] 
+        # C   = ds["dcov"] 
         Cinv = ds["dcov_inv"]
         
         target = Target(
@@ -50,7 +50,7 @@ def Hi_loglike(state, datasets):
     for ds in datasets:
         name   = ds["type"]      # 예: 'RPV01', 'RGV01', ...
         obs0   = ds["obs"]
-        var0   = ds["var"]
+        # var0   = ds["var"]
         forward = ds["forward"]  # forward 계산 식; read_pard 참고
         C   = ds["dcov"] 
         Cinv = ds["dcov_inv"]
@@ -65,7 +65,12 @@ def Hi_loglike(state, datasets):
         dpred = forward(state)
         state.cache[f"{name}.dpred"] = dpred
         
+        if len(obs0) != len(dpred):
+            logL=-1e30
+            return logL
+        
         resi = obs0 - dpred
+        
         scale_factor = np.exp(2.0 * w)
         
         # C_scaled^{-1} = (1/s) * C^{-1}

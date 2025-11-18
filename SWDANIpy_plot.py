@@ -33,11 +33,9 @@ datasets = par["datasets"]
 yscale = 'log'
 
 
-
 ####################
 # parameterization
 ####################
-
 zmin, zmax, dz = priors['depth']
 vsmin, vsmax, dvs = priors["vs"]
 

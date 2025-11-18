@@ -5,189 +5,196 @@ Created on Thu Nov 13 17:48:24 2025
 
 @author: segu
 """
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import numpy as np
-from scipy.signal import cheb1ord, cheby1, filtfilt, detrend
+from scipy.signal import cheb1ord, cheby1, lfilter, detrend
 
 
-def raydec1station_py(vert, north, east, time,
+def raydecpy(vert, north, east, time,
                       fmin, fmax, fsteps,
-                      cycles=10, dfpar=0.1, nwind=1):
+                      cycles, dfpar, nwind):
     """
-    파이썬 포트 버전의 raydec1station.
+    MATLAB raydec1station.m 의 1:1 포트 버전 (수치 동작 최대한 동일하게 맞춤)
 
-    Parameters
-    ----------
-    vert, north, east : 1D array
-        수직 / 북-남 / 동-서 성분 (동일 길이)
-    time : 1D array
-        시간축 (초), 균일 샘플링 가정
-    fmin, fmax : float
-        분석 주파수 범위 [Hz]
-    fsteps : int
-        로그 스케일 상 주파수 샘플 개수
-    cycles : float
-        스택 신호 길이를 주기 단위로 지정 (MATLAB CYCLES)
-    dfpar : float
-        상대 대역폭 (MATLAB DFPAR, 보통 0.1)
-    nwind : int
-        전체 신호를 나눌 시간 윈도우 개수
+    입력:
+        vert, north, east : 1D array (N,)
+        time              : 1D array (N,), 균일 샘플링
+        fmin, fmax        : 분석 주파수 범위 [Hz]
+        fsteps            : 로그 스케일 주파수 샘플 개수
+        cycles            : 스택 신호 길이 (주기 개수)
+        dfpar             : 상대 대역폭 (보통 0.1)
+        nwind             : 시간 윈도우 개수
 
-    Returns
-    -------
-    freqs : (fsteps, nwind) array
-        각 윈도우별 주파수 리스트
-    ell   : (fsteps, nwind) array
-        Rayleigh-wave ellipticity (H_radial / V)
+    반환:
+        V : (fsteps, nwind)  각 윈도우별 주파수 리스트 (MATLAB V=fl)
+        W : (fsteps, nwind)  각 윈도우별 ellipticity (MATLAB W=el)
     """
 
-    # ---- 입력 형식 정리 (N x 1 형태로 가정) ----
-    vert = np.asarray(vert).ravel()
-    north = np.asarray(north).ravel()
-    east = np.asarray(east).ravel()
-    time = np.asarray(time).ravel()
+    # ----- 입력을 column vector 형태로 가정 -----
+    v1 = np.asarray(vert).ravel()
+    n1 = np.asarray(north).ravel()
+    e1 = np.asarray(east).ravel()
+    t1 = np.asarray(time).ravel()
 
-    if not (vert.shape == north.shape == east.shape == time.shape):
+    if not (v1.shape == n1.shape == e1.shape == t1.shape):
         raise ValueError("vert, north, east, time 길이가 서로 같아야 합니다.")
 
-    K0 = vert.size
-    K = K0 // nwind          # 한 윈도우 길이
-    tau = time[1] - time[0]  # 샘플 간격
+    K0 = v1.size
+    K = K0 // nwind
+    tau = t1[1] - t1[0]
     DTmax = 30.0
     fnyq = 1.0 / (2.0 * tau)
 
-    # MATLAB 코드의 fstart / fend
     fstart = max(fmin, 1.0 / DTmax)
     fend = min(fmax, fnyq)
 
-    # 로그 스케일 주파수 설정
-    constlog = (fend / fstart) ** (1.0 / (fsteps - 1))
     fl = np.zeros((fsteps, nwind))
     el = np.zeros((fsteps, nwind))
 
-    for iw in range(nwind):
-        # ---- 윈도우별 데이터 추출 & detrend ----
-        s = slice(iw * K, (iw + 1) * K)
-        v = detrend(vert[s])
-        n = detrend(north[s])
-        e = detrend(east[s])
-        t = time[s]
+    constlog = (fend / fstart) ** (1.0 / (fsteps - 1))
+
+    # 윈도우 루프 (ind1 = 1..nwind)
+    for ind1 in range(nwind):
+        s0 = ind1 * K
+        s1 = (ind1 + 1) * K
+
+        vert_win = detrend(v1[s0:s1])
+        north_win = detrend(n1[s0:s1])
+        east_win = detrend(e1[s0:s1])
+        time_win = t1[s0:s1]
 
         horizontalamp = np.zeros(fsteps)
         verticalamp = np.zeros(fsteps)
 
-        Tmax = t.max()
+        Tmax = np.max(time_win)
 
-        for fi in range(fsteps):
+        # (MATLAB: fl=fstart*constlog.^(cumsum(ones(fsteps,nwind))-1);)
+        # 여기서는 윈도우마다 동일하게 직접 계산
+        flist = np.zeros(fsteps)
+
+        # 주파수 루프 (findex = 1..fsteps)
+        for findex in range(fsteps):
             # 중심 주파수
-            f = fstart * (constlog ** fi)
+            f = fstart * (constlog ** findex)
+            flist[findex] = f
+            fl[findex, ind1] = f
 
-            # 필터 대역폭 설정
+            # 필터 대역폭
             df = dfpar * f
             fmin_b = max(fstart, f - df / 2.0)
             fmax_b = min(fnyq, f + df / 2.0)
-            fl[fi, iw] = f
 
-            # 스택 길이 (주기 기준 cycles)
             DT = cycles / f
-            wl = int(round(DT / tau))  # window length in samples
+            wl = int(np.round(DT / tau))   # window length in samples
 
-            # Chebyshev bandpass 필터 설계 (MATLAB cheb1ord + cheby1 대응)
-            # passband / stopband 경계
-            # 주파수는 0~fnyq 사이 정규화 (scipy는 0~1에서 1이 Nyquist)
-            bw = (fmax_b - fmin_b)
-            wp = [fmin_b + bw / 10.0, fmax_b - bw / 10.0]
-            ws = [max(1e-6, fmin_b - bw / 10.0), min(fnyq - 1e-6, fmax_b + bw / 10.0)]
+            # Chebyshev 필터 (MATLAB cheb1ord/cheby1와 동일 공식)
+            passband = np.array([
+                fmin_b + (fmax_b - fmin_b) / 10.0,
+                fmax_b - (fmax_b - fmin_b) / 10.0
+            ]) / fnyq
+            stopband = np.array([
+                fmin_b - (fmax_b - fmin_b) / 10.0,
+                fmax_b + (fmax_b - fmin_b) / 10.0
+            ]) / fnyq
 
-            wp_n = np.array(wp) / fnyq
-            ws_n = np.array(ws) / fnyq
+            # 그대로 쓰면 0 미만/1 초과가 될 수 있으므로, MATLAB과 같이
+            # 정상적인 주파수 범위가 들어온다고 가정
+            na, wn = cheb1ord(passband, stopband, gpass=1, gstop=5)
+            b, a = cheby1(na, 0.5, wn, btype='band')
 
-            # MATLAB: cheb1ord(..., 1, 5)
-            N, wn = cheb1ord(wp_n, ws_n, gpass=1, gstop=5)
-            # MATLAB: cheby1(na, 0.5, wn)
-            b, a = cheby1(N, rp=0.5, Wn=wn, btype='band')
+            # taper (MATLAB의 0:1/round(N/100):1 과 동일하게 생성)
+            N = time_win.size
+            step = int(np.round(N / 100.0))
+            if step < 1:
+                step = 1
 
-            # taper (양끝 1% 정도 코사인 테이퍼 유사)
-            nt = len(t)
-            taper_len = max(1, nt // 100)
-            taper1 = np.linspace(0, 1, taper_len, endpoint=False)
+            taper1 = np.arange(0.0, 1.0 + 1e-12, 1.0 / step)
+            if 2 * taper1.size > N:
+                raise ValueError("데이터 길이가 너무 짧아서 MATLAB taper 공식을 그대로 쓸 수 없습니다.")
+            taper2 = np.ones(N - 2 * taper1.size)
             taper3 = taper1[::-1]
-            if 2 * taper_len >= nt:
-                # 데이터가 너무 짧으면 그냥 전체 taper만 적용
-                taper = np.hanning(nt)
-            else:
-                taper2 = np.ones(nt - 2 * taper_len)
-                taper = np.concatenate([taper1, taper2, taper3])
+            taper = np.concatenate([taper1, taper2, taper3])
+            taper = taper.reshape(-1)
 
-            # 필터링 (위상 보존 위해 filtfilt 사용)
-            vs = filtfilt(b, a, v * taper)
-            ns = filtfilt(b, a, n * taper)
-            es = filtfilt(b, a, e * taper)
+            # 필터링: MATLAB filter(ch1,ch2,...)와 1:1 대응 → lfilter 사용
+            norths = lfilter(b, a, taper * north_win)
+            easts = lfilter(b, a, taper * east_win)
+            verts = lfilter(b, a, taper * vert_win)
 
-            # 음→양 zero-crossing 찾기 (derive == 1)
-            derive = (np.sign(vs[1:]) - np.sign(vs[:-1])) / 2.0
+            # 음→양 zero-crossing
+            derive = (np.sign(verts[1:K]) - np.sign(verts[0:(K - 1)])) / 2.0
 
             vertsum = np.zeros(wl)
             horsum = np.zeros(wl)
+            dvindex = 0
 
-            # MATLAB: index = ceil(1/(4*f*tau))+1 : length(derive)-wl
+            # MATLAB: for index = ceil(1/(4*f*tau))+1 : length(derive)-wl
+            start_M = int(np.ceil(1.0 / (4.0 * f * tau))) + 1   # 1-based
+            end_M = len(derive) - wl                           # 1-based
+
+            # 0-based 인덱스로 변환
+            start_idx = start_M - 1
+            end_idx_exclusive = end_M      # range(..., end_M) → 마지막 = end_M-1
+
             offset = int(np.floor(1.0 / (4.0 * f * tau)))
-            istart = int(np.ceil(1.0 / (4.0 * f * tau)))
-            iend = len(derive) - wl
 
-            if iend <= istart:
-                continue  # 데이터 길이가 너무 짧은 경우 건너뛰기
-
-            for idx in range(istart, iend):
+            for idx in range(start_idx, end_idx_exclusive):
                 if derive[idx] == 1:
+                    dvindex += 1
                     # vsig: vertical
-                    vsig = vs[idx: idx + wl]
+                    vsig = verts[idx:idx + wl]
 
-                    # esig / nsig: 약간 앞에서 시작 (offset)
+                    # esig / nsig: index-floor(1/(4*f*tau)) ~ + wl-1
                     i0 = idx - offset
-                    if i0 < 0 or i0 + wl > nt:
-                        continue
-                    esig = es[i0: i0 + wl]
-                    nsig = ns[i0: i0 + wl]
+                    esig = easts[i0:i0 + wl]
+                    nsig = norths[i0:i0 + wl]
 
-                    # azimuth 추정 (MATLAB: atan(integral1/integral2) + 보정)
+                    # MATLAB: integral1 = sum(vsig.*esig);
+                    #         integral2 = sum(vsig.*nsig);
                     integral1 = np.sum(vsig * esig)
                     integral2 = np.sum(vsig * nsig)
 
-                    # atan2가 더 안전 (integral2=0 방지)
-                    theta = np.arctan2(integral1, integral2)
-
+                    # theta 계산 (atan → atan2 + 동일 보정)
+                    if integral2 == 0:
+                        # MATLAB에서도 NaN/Inf가 될 수 있는 경우라, 그냥 skip
+                        continue
+                    theta = np.arctan(integral1 / integral2)
                     if integral2 < 0:
                         theta += np.pi
                     theta = (theta + np.pi) % (2.0 * np.pi)
 
-                    # radial 방향 수평 성분
+                    # radial 방향 성분
                     hsig = np.sin(theta) * esig + np.cos(theta) * nsig
 
-                    # 상관계수 (항상 음수에 가깝다고 가정, MATLAB과 동일 정의)
+                    # 상관계수
                     num = np.sum(vsig * hsig)
                     den = np.sqrt(np.sum(vsig ** 2) * np.sum(hsig ** 2))
                     if den == 0:
                         continue
                     correlation = num / den
 
-                    if correlation >= -1:  # MATLAB if correlation>=-1
-                        w_corr = correlation ** 2
-                        vertsum += w_corr * vsig
-                        horsum += w_corr * hsig
+                    if correlation >= -1:
+                        vertsum = vertsum + (correlation ** 2) * vsig
+                        horsum = horsum + (correlation ** 2) * hsig
 
-            klimit = min(wl, int(round(DT / tau)))
+            klimit = int(np.round(DT / tau))
+            if klimit > wl:
+                klimit = wl
             if klimit <= 0:
-                continue
+                verticalamp[findex] = 0.0
+                horizontalamp[findex] = 0.0
+            else:
+                verticalamp[findex] = np.sqrt(np.sum(vertsum[:klimit] ** 2))
+                horizontalamp[findex] = np.sqrt(np.sum(horsum[:klimit] ** 2))
 
-            verticalamp[fi] = np.sqrt(np.sum(vertsum[:klimit] ** 2))
-            horizontalamp[fi] = np.sqrt(np.sum(horsum[:klimit] ** 2))
-
-        # 이 윈도우에서의 ellipticity (H_radial / V)
+        # 각 윈도우의 ellipticity
         with np.errstate(divide='ignore', invalid='ignore'):
             ellist = horizontalamp / verticalamp
-            ellist[~np.isfinite(ellist)] = np.nan
 
-        el[:, iw] = ellist
+        el[:, ind1] = ellist
 
-    return fl, el
+    V = fl   # MATLAB V = fl
+    W = el   # MATLAB W = el
+    return V, W
