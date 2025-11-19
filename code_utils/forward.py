@@ -37,6 +37,9 @@ def forward_PVswd(state, dperi, static_property=True, wave='rayleigh', mode=0):
     pd = PhaseDispersion(thk, vp, vs, rho)
     pv_pred = pd(dperi, mode=mode, wave=wave).velocity
     
+    if len(dperi) != len(pv_pred):
+        pv_pred = np.full(len(dperi), 1e+99, dtype=float)    
+    
     return pv_pred
 
 
@@ -58,7 +61,14 @@ def forward_GVswd(state, dperi, static_property=True, wave='rayleigh', mode=0):
         rho = vp2rho(vp)
 
     gd = GroupDispersion(thk, vp, vs, rho)
-    gv_pred = gd(dperi, mode=mode, wave=wave).velocity  # [same units as disba 반환]
+    gv_pred = gd(dperi, mode=mode, wave=wave).velocity
+    
+    if len(dperi) != len(gv_pred):
+        # If the proposed model cannot generate predictions across the full
+        # requested period range, fill with a very small value so that the
+        # log-likelihood becomes extremely small (penalizing the model).
+        gv_pred = np.full(len(dperi), 1e+99, dtype=float)    
+        
     return gv_pred
 
 
@@ -88,10 +98,12 @@ def forward_ell(state, dperi, static_property=True, wave='rayleigh', mode=0):
     ’fast-delta’: fast delta matrix (after Buchen and Ben-Hador, 1996).
     dc (scalar, optional, default 0.005) – Phase velocity increment for root finding.
     """
-    el_pred = ell(dperi, mode=mode).ellipticity
-    print("LEN dperi:", len(dperi), "LEN d_pred:", len(el_pred))
+    el_pred = np.abs(ell(dperi, mode=mode).ellipticity)
+    if len(dperi) != len(el_pred):
+        el_pred = np.full(len(dperi), 1e+99, dtype=float)    
+    # print("LEN dperi:", len(dperi), "LEN d_pred:", len(el_pred))
 
-    return np.abs(el_pred)
+    return el_pred
 
 
 
