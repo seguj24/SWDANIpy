@@ -12,6 +12,8 @@ from bayesbay.discretization import Voronoi1D
 ## forward module
 from disba import PhaseDispersion, GroupDispersion, Ellipticity
 
+import pyhk  
+
 import sys
 d_def = '/home/seguuu/Project/02_Bayesian_inversion/BayesBay_TEST/code_utils'
 sys.path.append(f"{d_def}")
@@ -105,15 +107,44 @@ def forward_ell(state, dperi, static_property=True, wave='rayleigh', mode=0):
 
     return el_pred
 
+def forward_rf(state, dtime, slowness, gauss, 
+               static_property=True): #, RF_STD=0.015):
+    
+    voronoi = state["voronoi"]
+    voronoi_sites = voronoi["discretization"]
+    thk = Voronoi1D.compute_cell_extents(voronoi_sites)
+    vs = voronoi["vs"]
+    
+    if static_property:
+        vpvs= np.array([1.75]*len(vs))
+        vp = vpvs/vs
+        # rho = np.array([2.0]*len(vs))
+    else:
+        vp = vs2vp(vs)
+        vpvs = vp/vs
+        # rho = vp2rho(vp)
+        
+    tintv   = dtime[1] - dtime[0]     # time interval
+    
+    tsft    = -dtime[0]
+    tdur   = dtime[-1]-dtime[0]
+    
+
+    rf_pred = pyhk.rfcalc(
+        ps      = 0,
+        thick   = thk,
+        beta    = vs,
+        kapa    = vpvs, 
+        p       = slowness,    
+        duration= tdur,
+        dt      = tintv,
+        shft    = tsft,         
+        gauss   = gauss         
+        )
+    
+    if len(dtime) != len(rf_pred):
+        rf_pred = np.full(len(dtime), 1e+99, dtype=float)    
+    
+    return rf_pred
 
 
-# def forward_swd(state, dperi, LorP, GorP, wave='rayleigh', mode=0):
-#     voronoi = state["voronoi"]
-#     voronoi_sites = voronoi["discretization"]
-#     thk = Voronoi1D.compute_cell_extents(voronoi_sites)
-#     vs = voronoi["vs"]
-#     vp = vs2vp(vs)
-#     rho = vp2rho(vp)    
-#     if GorP == "group":
-#         if LorP == "love":
-            

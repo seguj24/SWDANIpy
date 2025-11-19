@@ -14,7 +14,7 @@ from functools import partial
 import sys
 d_def = '/home/seguuu/Project/02_Bayesian_inversion/BayesBay_TEST/code_utils'
 sys.path.append(f"{d_def}")
-from forward import forward_PVswd, forward_GVswd, forward_ell
+from forward import forward_PVswd, forward_GVswd, forward_ell, forward_rf
 from datacov import init_dcov
 
 
@@ -23,7 +23,6 @@ def read_par(par_path="./Par", static_property=False):
     lines = par_path.read_text(encoding="utf-8").splitlines()
     
     def nxt_tokens(it):
-        # 빈줄/전행주석 스킵 + 인라인 주석 제거
         for s in it:
             s = s.strip()
             if not s or s.startswith(("!", "#")):
@@ -54,49 +53,64 @@ def read_par(par_path="./Par", static_property=False):
     nvoro_min, nvoro_max = map(int, nxt_tokens(it)[:2])
     rand_seed, rand_rmul = map(float, nxt_tokens(it)[:2])
     
-    
     tk = nxt_tokens(it)
     w0, w1, dw = map(float, tk[:3])
     
-    # 데이터 개수: 첫 토큰만 사용
     ndata = int(float(nxt_tokens(it)[0]))
-        
+    
+    SWD = {"RPV", "RGV", "LPV", "LGV", "ELL"}
+    RF  = {"PRF"}
+    
+    type_count = {k: 0 for k in SWD | RF}
     datasets = []
     
-    SWD = {"RPV","RGV","LPV","LGV","ELL"}
-    type_count = {k: 0 for k in SWD}
     for _ in range(ndata):
-        cindex = nxt_tokens(it)[0].upper()
-        if cindex not in SWD:
-            raise ValueError(f"Invalid data type: {cindex}")
+        tk = nxt_tokens(it)
+        cindex = tk[0].upper()
+        # cindex = nxt_tokens(it)[0].upper()
+    
+        if cindex not in (SWD | RF):
+            raise ValueError(f"Unknown data type: {cindex}")
+        
         type_count[cindex] += 1
         type_label = f"{cindex}{type_count[cindex]:02d}"
     
-        filename = " ".join(nxt_tokens(it)).strip()
-        filename = filename.strip("'\"") 
+        if cindex in SWD:
+            filename = " ".join(nxt_tokens(it)).strip().strip("'\"")
+    
+        elif cindex in RF:
+            gauss, slow = map(float, tk[1:3])
+            filename = " ".join(nxt_tokens(it)).strip().strip("'\"")
+        # else:
+        #     raise ValueError(f"Unknown data type: {cindex}")
+    
         fpath = par_path.parent / filename
     
-        arr = np.loadtxt(fpath, comments=("#","!"))
+        arr = np.loadtxt(fpath, comments=("#", "!"))
         if arr.ndim == 1:
             arr = arr[None, :]
-            
-        # Sort data by period (ascending order)
-        idx = np.argsort(arr[:,0])
-        arr = arr[idx, :]
-        t, obs, std = arr[:,0], arr[:,1], arr[:,2]
-        
-        if cindex == 'RPV':
-            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave='rayleigh', mode=0)
-        elif cindex == 'LPV':
-            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave='love', mode=0)
-        elif cindex == 'RGV':
-            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave='rayleigh', mode=0)
-        elif cindex == 'LGV':
-            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave='love', mode=0)
-        elif cindex == 'ELL':
-            forward_fn = partial(forward_ell, dperi=t, static_property=static_property, wave='rayleigh', mode=0)
-        # Ref. "./forward.py"
-            
+    
+        arr = arr[np.argsort(arr[:, 0])]
+    
+        t, obs, std = arr[:, 0], arr[:, 1], arr[:, 2]
+    
+        # ================================
+        # 3) forward 함수 생성
+        # ================================
+        if cindex == "RPV":
+            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+        elif cindex == "LPV":
+            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave="love", mode=0)
+        elif cindex == "RGV":
+            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+        elif cindex == "LGV":
+            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave="love", mode=0)
+        elif cindex == "ELL":
+            forward_fn = partial(forward_ell,  dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+    
+        elif cindex == "PRF":
+            forward_fn = partial(forward_rf, dtime=t, slowness=slow, gauss=gauss, static_property=static_property)
+    
         dcov, dcov_inv = init_dcov(arr)
         # Ref. "./datacov.py"
 
