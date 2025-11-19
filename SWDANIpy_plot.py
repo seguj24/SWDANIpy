@@ -31,49 +31,63 @@ par = read_par("./Par")
 
 priors = par["priors"]
 
-
 datasets = par["datasets"]
-
-yscale = 'log'
 
 
 ####################
-# parameterization
+# Parameters
 ####################
 zmin, zmax, dz = priors['depth']
 vsmin, vsmax, dvs = priors["vs"]
 
-# -------------------------
-# 결과 불러오기
-# -------------------------
+if zmax > 1:
+   yscale = 'linear'
+else:
+    yscale = 'log'
+    if zmin == 0:
+        zmin = 0.001
+
+####################
+# Call results
+####################
 with open("./OUT/results.pkl", "rb") as f:
     _results = pickle.load(f)
 
 results = {}
 for key, chains in _results.items():
     results[key] = [s for c in chains for s in c]
-
-# -------------------------
+#%%
+####################
 # Voronoi / Vs samples
-# -------------------------
+####################
 voros = results['voronoi.discretization']   # list of nuclei arrays
 thks = [Voronoi1D.compute_cell_extents(n) for n in voros]
 vss = results['voronoi.vs']                           # list of vs arrays
 
+####################
+# Depth grid
+####################
 
-# 깊이 그리드
 # dz = 0.001                    # depth bin 간격 (zmax와 같은 단위)
 nz = 200
 # z_edges = np.arange(0.0, zmax + dz, dz)   # bin 경계
 # z_centers = 0.5 * (z_edges[:-1] + z_edges[1:])  # center (층이 지나가는지 판정용)
-z_edges = np.logspace(np.log10(1e-3), np.log10(zmax), nz)  # 예: 800 bins 로그 등분
+
+if yscale == "linear":
+    z_edges = np.linspace(zmin, zmax, nz)  # 예: 800 bins 로그 등분
+else:
+    z_edges = np.logspace(np.log10(1e-3), np.log10(zmax), nz)  # 예: 800 bins 로그 등분
 z_centers = 0.5 * (z_edges[:-1] + z_edges[1:])
 
-# Vs 그리드
+####################
+# Vs grid
+####################
 n_vs = 100
 v_edges = np.linspace(vsmin, vsmax, n_vs)
 
-# 2D 카운트 (depth × Vs)
+####################
+# 2D count (depth × Vs)
+####################
 density = np.zeros((len(z_edges) - 1, len(v_edges) - 1), dtype=float)
 
 # 인터페이스 깊이 카운트 (1D)
@@ -199,13 +213,13 @@ ax_intf.plot(interface_density_norm, z_centers, 'k-', lw=1.5)
 
 ax_intf.set_xlim(0, 1.05)
 ax_intf.set_xlabel("Interface probability")
-ax_intf.set_ylabel("Depth [m]")
+ax_intf.set_ylabel("Depth [km]")
 
 for ax in [ax_intf, ax_vs]:
     ax.invert_yaxis()
     ax.set_yscale(yscale)
-    if yscale == 'log' and zmin == 0:
-        zmin = 0.001
+    # if yscale == 'log' and zmin == 0:
+        # zmin = 0.001
     ax.set_ylim(zmax, zmin)
     
     ax.grid(ls='--', lw=0.5, c='gray')

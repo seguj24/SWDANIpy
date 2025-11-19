@@ -164,40 +164,51 @@ class BaseMarkovChain:
         explored and accepted states for each perturbation, acceptance rates and the
         current temperature
         """
-        head = f"Chain ID: {self.id}"
-        head += f"\nTEMPERATURE: {self.temperature}"
-        head += f"\nEXPLORED MODELS: {self.statistics['n_proposed_models_total']}"
-        _accepted_total = self.statistics["n_accepted_models_total"]
-        _explored_total = self.statistics["n_proposed_models_total"]
-        acceptance_rate = _accepted_total / _explored_total * 100
-        head += "\nACCEPTANCE RATE: %d/%d (%.2f %%)" % (
-            _accepted_total,
-            _explored_total,
-            acceptance_rate,
-        )
-        print(head)
-        print("PARTIAL ACCEPTANCE RATES:")
-        _accepted_all = self.statistics["n_accepted_models"]
-        _explored_all = self.statistics["n_proposed_models"]
-        for perturb_type in sorted(self.statistics["n_proposed_models"]):
-            _explored = _explored_all[perturb_type]
-            _accepted = _accepted_all[perturb_type]
-            if isinstance(_explored, dict):
-                print(f"\t{perturb_type}:")
-                for sub_perturb_type in sorted(_explored):
-                    _sub_explored = _explored[sub_perturb_type]
-                    _sub_accepted = _accepted[sub_perturb_type]
-                    acceptance_rate = _sub_accepted / _sub_explored * 100
-                    print(
-                        f"\t\t{sub_perturb_type}: "
-                        f"{_sub_accepted:.2f}/{_sub_explored:.2f} ({acceptance_rate:.2f}%)"
-                    )
-            else:
-                acceptance_rate = _accepted / _explored * 100
-                print(
-                    "\t%s: %d/%d (%.2f%%)"
-                    % (perturb_type, _accepted, _explored, acceptance_rate)
-                )
+        Nmodel          = self.statistics["n_proposed_models_total"]
+        cid             = self.id
+        temp            = self._temperature
+        misfit, log_det = self.log_likelihood._get_misfit_and_det(self.current_state)
+
+        N = sum(len(target.dobs) for target in self.log_likelihood.targets)
+        loglike = -0.5 * (misfit + log_det + N * math.log(2 * math.pi))
+        #print(f"Nmodel: {explored_models}\tcid: {chain_id}\ttemp: {temperature}\tloglike: {loglike}")
+        print(f"ITER: {Nmodel}\tCID: {cid}\tloglike: {loglike}\tTEMP: {temp}")
+################## ORIGINAL CODE ###################
+        # head = f"Chain ID: {self.id}"
+        # head += f"\nTEMPERATURE: {self.temperature}"
+        # head += f"\nEXPLORED MODELS: {self.statistics['n_proposed_models_total']}"
+        # _accepted_total = self.statistics["n_accepted_models_total"]
+        # _explored_total = self.statistics["n_proposed_models_total"]
+        # acceptance_rate = _accepted_total / _explored_total * 100
+        # head += "\nACCEPTANCE RATE: %d/%d (%.2f %%)" % (
+        #     _accepted_total,
+        #     _explored_total,
+        #     acceptance_rate,
+        # )
+        # print(head)
+        # print("PARTIAL ACCEPTANCE RATES:")
+        # _accepted_all = self.statistics["n_accepted_models"]
+        # _explored_all = self.statistics["n_proposed_models"]
+        # for perturb_type in sorted(self.statistics["n_proposed_models"]):
+        #     _explored = _explored_all[perturb_type]
+        #     _accepted = _accepted_all[perturb_type]
+        #     if isinstance(_explored, dict):
+        #         print(f"\t{perturb_type}:")
+        #         for sub_perturb_type in sorted(_explored):
+        #             _sub_explored = _explored[sub_perturb_type]
+        #             _sub_accepted = _accepted[sub_perturb_type]
+        #             acceptance_rate = _sub_accepted / _sub_explored * 100
+        #             print(
+        #                 f"\t\t{sub_perturb_type}: "
+        #                 f"{_sub_accepted:.2f}/{_sub_explored:.2f} ({acceptance_rate:.2f}%)"
+        #             )
+        #     else:
+        #         acceptance_rate = _accepted / _explored * 100
+        #         print(
+        #             "\t%s: %d/%d (%.2f%%)"
+        #             % (perturb_type, _accepted, _explored, acceptance_rate)
+        #         )
+################## ORIGINAL CODE ###################
 
     def _log_likelihood_ratio(self, new_state):
         return self.log_likelihood.log_likelihood_ratio(

@@ -35,10 +35,8 @@ print(f">>> Start time : {time.ctime(starttime)}")
 
 custom_logL = False    
 # Ref. "./code_utils/likelihood.py"
-custum_vs_prior = True
+custum_vs_prior = False
 # Ref. "./code_utils/custom_prior.py"
-
-
 
 ####################
 # Read Par file
