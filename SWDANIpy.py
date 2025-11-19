@@ -18,7 +18,7 @@ from bayesbay.parameterization import Parameterization, ParameterSpace
 # Utils
 from functools import partial
 import sys
-d_def = '/home/seguuu/Project/02_Bayesian_inversion/SWDANI_SGmod/SWDANIpy/code_utils'
+d_def = '/Users/seguuu/Project/02_Bayesian_inversion/SWDANI_SGmod/SWDANIpy/code_utils'
 sys.path.append(f"{d_def}")
 # from datacov import dcov
 from read_par import read_par
@@ -28,6 +28,8 @@ from custom_prior import custom_prior_vs
 
 import time, os
 starttime = time.time()
+
+print(">>> Bayesbay version > 0.3.6")
 print(f">>> Start time : {time.ctime(starttime)}")
 
 ####################

@@ -1,4 +1,4 @@
-100000	50000	10				# Burn-in, Sample, Skip
+1000	1000	10				# Burn-in, Sample, Skip
 10								# Number of chain
 SA								# PT: Parallel Tempreing; SA: Simulated Annealing; None: None
 ####################			0: perturbe, 1: fixed, 2: empirical (Brocher, 2005)
@@ -13,9 +13,7 @@ SA								# PT: Parallel Tempreing; SA: Simulated Annealing; None: None
 ####################
 -5	5	0.05
 2
+RGV
+'./99.9091_3.35_gv_2_0.4.txt'
 RPV
-'./swd_masw.txt'
-RPV
-'./swd_mam_rayl.txt'
-#ELL
-#'./1658.txt'
+'./99.9091_3.35_pv_2_0.4.txt'
