@@ -91,7 +91,7 @@ def forward_ell(state, dperi, static_property=True, wave='rayleigh', mode=0):
     el_pred = ell(dperi, mode=mode).ellipticity
     print("LEN dperi:", len(dperi), "LEN d_pred:", len(el_pred))
 
-    return el_pred
+    return np.abs(el_pred)
 
 
 
