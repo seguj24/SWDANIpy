@@ -16,10 +16,12 @@ from bayesbay.discretization import Voronoi1D
 
 # Utils
 import sys
-d_def = '/Users/seguuu/Project/02_Bayesian_inversion/SWDANIpy/code_utils'
+d_def = "/Users/seguuu/Project/02_Bayesian_inversion/SWDANI_SGmod/SWDANIpy/code_utils"
 sys.path.append(f"{d_def}")
 # from datacov import dcov
 from read_par import read_par
+
+print("########## ONLY PLOT VsProfile yet")  
 
 ####################
 # Read Par file
