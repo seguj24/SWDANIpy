@@ -18,7 +18,7 @@ from forward import forward_PVswd, forward_GVswd, forward_ell, forward_rf
 from datacov import init_dcov
 
 
-def read_par(par_path="./Par", static_property=False):
+def read_par(par_path="./Par"):
     par_path = Path(par_path)
     lines = par_path.read_text(encoding="utf-8").splitlines()
     
@@ -52,6 +52,8 @@ def read_par(par_path="./Par", static_property=False):
     vs_transd, xi_transd, vpvs_transd, rho_transd = map(float, nxt_tokens(it)[:4])
     nvoro_min, nvoro_max = map(int, nxt_tokens(it)[:2])
     rand_seed, rand_rmul = map(float, nxt_tokens(it)[:2])
+    
+    prior_switches = {"xi": xi_sw, "vpvs": vpvs_sw, "rho": rho_sw}
     
     tk = nxt_tokens(it)
     w0, w1, dw = map(float, tk[:3])
@@ -93,23 +95,28 @@ def read_par(par_path="./Par", static_property=False):
         arr = arr[np.argsort(arr[:, 0])]
     
         t, obs, std = arr[:, 0], arr[:, 1], arr[:, 2]
+        
+        if cindex in RF:
+            if std[0] == 0:
+                std[0] = std[1]
+        
     
         # ================================
         # 3) forward 함수 생성
         # ================================
         if cindex == "RPV":
-            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+            forward_fn = partial(forward_PVswd, dperi=t, prior_switches=prior_switches, wave="rayleigh", mode=0)
         elif cindex == "LPV":
-            forward_fn = partial(forward_PVswd, dperi=t, static_property=static_property, wave="love", mode=0)
+            forward_fn = partial(forward_PVswd, dperi=t, prior_switches=prior_switches, wave="love", mode=0)
         elif cindex == "RGV":
-            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+            forward_fn = partial(forward_GVswd, dperi=t, prior_switches=prior_switches, wave="rayleigh", mode=0)
         elif cindex == "LGV":
-            forward_fn = partial(forward_GVswd, dperi=t, static_property=static_property, wave="love", mode=0)
+            forward_fn = partial(forward_GVswd, dperi=t, prior_switches=prior_switches, wave="love", mode=0)
         elif cindex == "ELL":
-            forward_fn = partial(forward_ell,  dperi=t, static_property=static_property, wave="rayleigh", mode=0)
+            forward_fn = partial(forward_ell,  dperi=t, prior_switches=prior_switches, wave="rayleigh", mode=0)
     
         elif cindex == "PRF":
-            forward_fn = partial(forward_rf, dtime=t, slowness=slow, gauss=gauss, static_property=static_property)
+            forward_fn = partial(forward_rf, dtime=t, slowness=slow, gauss=gauss, prior_switches=prior_switches)
     
         dcov, dcov_inv = init_dcov(arr)
         # Ref. "./datacov.py"
@@ -133,12 +140,13 @@ def read_par(par_path="./Par", static_property=False):
         "priors": {
             "depth": (depth_min, depth_max, depth_delta),
             "vs": (vs_min, vs_max, vs_delta),
-            "xi": (xi_min, xi_max, xi_delta, xi_sw, xi_transd),
-            "vpvs": (vpvs_min, vpvs_max, vpvs_delta, vpvs_sw, vpvs_transd),
-            "rho": (rho_min, rho_max, rho_delta, rho_sw, rho_transd),
+            "xi": (xi_min, xi_max, xi_delta),
+            "vpvs": (vpvs_min, vpvs_max, vpvs_delta),
+            "rho": (rho_min, rho_max, rho_delta),
             "nvoro": (nvoro_min, nvoro_max),
             "rand": (rand_seed, rand_rmul),
             },
+        "switch": prior_switches,
         "weights": (w0, w1, dw),
         "datasets": datasets,
         }

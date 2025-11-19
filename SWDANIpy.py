@@ -32,50 +32,82 @@ starttime = time.time()
 print(">>> Bayesbay version > 0.3.6")
 print(f">>> Start time : {time.ctime(starttime)}")
 
-####################
-# Read Par file
-####################
-par = read_par("./Par", static_property=True)
-# Ref. "./code_utils/read_par.py"
-# dict_keys(['Nchain', 'mcmc', 'Sampler', 'priors', 'weights', 'datasets'])
-
-Ncore = int(par["Nchain"])
-burnin, sample, skip = int(par["mcmc"]["burnin"]), int(par["mcmc"]["sample"]), int(par["mcmc"]["skip"])
-transd = par["transD"]
-
-priors = par["priors"]
-beta = par["weights"]
-datasets = par["datasets"]
-
-Ndat = int(len(datasets))
-
-sampler_type = par["sampler"]
-# PT: Parallel Tempreing
-# SA: Simulated Annealing
-# None: None
-
-if Ncore == 1 and sampler_type == "PT":
-    print(f">>> Chains={Ncore}, Sampler={sampler_type}")
-    print(">>> Parallel Tempering needs >1 chain.")
-    print(">>> Switching to Simulated Annealing.")  
 
 custom_logL = False    
 # Ref. "./code_utils/likelihood.py"
-custum_prior = False
+custum_vs_prior = True
 # Ref. "./code_utils/custom_prior.py"
+
+
+
+####################
+# Read Par file
+####################
+par = read_par("./Par")
+# Ref. "./code_utils/read_par.py"
+# dict_keys(['Nchain', 'mcmc', 'Sampler', 'priors', 'weights', 'datasets'])
+
+# par =  {
+#     "Nchain": Ncore,
+#     "mcmc": {"burnin": burnin, "sample": sample, "skip": skip},
+#     "sampler": sampler,
+#     "transD": {"vs": vs_transd, "xi": xi_transd, "vpvs": vpvs_transd, "rho":rho_transd},
+#     "priors": {
+#         "depth": (depth_min, depth_max, depth_delta),
+#         "vs": (vs_min, vs_max, vs_delta),
+#         "xi": (xi_min, xi_max, xi_delta, xi_sw, xi_transd),
+#         "vpvs": (vpvs_min, vpvs_max, vpvs_delta, vpvs_sw, vpvs_transd),
+#         "rho": (rho_min, rho_max, rho_delta, rho_sw, rho_transd),
+#         "nvoro": (nvoro_min, nvoro_max),
+#         "rand": (rand_seed, rand_rmul),
+#         },
+#     "weights": (w0, w1, dw),
+#     "datasets": datasets,
+#     }
+
+
 
 ####################
 # parameterization
 ####################
 
+burnin, sample, skip = int(par["mcmc"]["burnin"]), int(par["mcmc"]["sample"]), int(par["mcmc"]["skip"])
 Niter = burnin + sample
+Ncore = int(par["Nchain"])
 
-zmin, zmax, dz = priors['depth']
-vsmin, vsmax, dvs = priors["vs"]
-vs_transd = transd["vs"]         # ! 이 VS_TRANSD가 적절한건지 확인할 필요 있음.
-nvmin, nvmax = priors["nvoro"]
-rand_seed, rand_rmul = priors["rand"]
-w0, w1, dw = beta
+priors = par["priors"]
+transd = par["transD"]
+beta   = par["weights"]
+switch = par["switch"]
+datasets = par["datasets"]
+
+Ndat = int(len(datasets))
+
+zmin, zmax, dz          = priors['depth']
+vsmin, vsmax, dvs       = priors["vs"]
+vpvsmin,vpvsmax, dvpvs  = priors["vpvs"]
+rhomin, rhomax, drho    = priors["rho"]
+nvmin, nvmax            = priors["nvoro"]
+rand_seed, rand_rmul    = priors["rand"]
+w0, w1, dw              = par["weights"]
+
+vs_transd               = transd["vs"]         # ! 이 VS_TRANSD가 적절한건지 확인할 필요 있음.
+vpvs_transd             = transd["vpvs"]
+xi_transd               = transd["xi"]
+rho_transd              = transd["rho"]
+
+vpvs_sw                 = switch["vpvs"]
+xi_sw                   = switch["xi"]
+rho_sw                  = switch["rho"]
+
+sampler_type            = par["sampler"]
+# PT: Parallel Tempreing
+# SA: Simulated Annealing
+# None: None
+if Ncore == 1 and sampler_type == "PT":
+    print(f">>> Chains={Ncore}, Sampler={sampler_type}")
+    print(">>> Parallel Tempering needs >1 chain.")
+    print(">>> Switching to Simulated Annealing.")  
 
 
 os.makedirs("./OUT", exist_ok=True)
@@ -99,7 +131,7 @@ for i, ds in enumerate(datasets, 1):
 both("\n### Priors ###")
 both(f"Depth (zmin, zmax, dz)   : {zmin}, {zmax}, {dz}")
 both(f"Vs (vsmin, vsmax, dvs)   : {vsmin}, {vsmax}, {dvs}")
-both(f"Vs transD                : {vs_transd}")
+# both(f"Vs transD                : {vs_transd}")
 both(f"No.Layer (nvmin, nvmax)  : {nvmin}, {nvmax}")
 both(f"Rand (seed, rmul)        : {rand_seed}, {rand_rmul}")
 
@@ -112,15 +144,22 @@ log.close()
 ###################
 # Custom prior
 ###################
-if custum_prior:
-    vs_prior = custom_prior_vs(zmin, zmax, vsmin, vsmax, vs_transd)
+priors = []
+if custum_vs_prior:
+    vs_prior = custom_prior_vs(zmin, zmax, vsmin, vsmax, dvs)
+    priors.append(vs_prior)
 else:
-    vs_prior = UniformPrior(
-        name="vs",
-        vmin=vsmin,
-        vmax=vsmax,
-        perturb_std=vs_transd,    # 여기 들어가는 변수 맞는지 다시 확인
-        )
+    vs_prior = UniformPrior(name="vs", vmin=vsmin, vmax=vsmax, perturb_std=dvs)
+    priors.append(vs_prior)
+    
+if vpvs_sw == 0: 
+    vpvs_prior = UniformPrior(name="vpvs", vmin=vpvsmin, vmax=vpvsmax, perturb_std=dvpvs)
+    priors.append(vpvs_prior)
+
+if rho_sw == 0: 
+    rho_prior = UniformPrior(name="rho", vmin=rhomin, vmax=rhomax, perturb_std=drho)
+    priors.append(rho_prior)
+    
 
 voronoi = Voronoi1D(
     name="voronoi",
@@ -130,11 +169,12 @@ voronoi = Voronoi1D(
     n_dimensions=None,
     n_dimensions_min=int(nvmin),
     n_dimensions_max=int(nvmax),
-    parameters=[vs_prior],
+    parameters=priors,
     )   
 
 param_spaces = [voronoi]
 
+# Prior range for DATA WEIGHT
 for ds in datasets:
     name = ds["type"]   # e.g., RPV01, RGV01
     w_space = ParameterSpace(
@@ -198,8 +238,6 @@ inversion.run(
     print_every= 1000, #max(Niter // 1000, 1)
     verbose=True,
     )
-
-
 
 endtime = time.time()
 print(f">>> End time   : {time.ctime(endtime)}")

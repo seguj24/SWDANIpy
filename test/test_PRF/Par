@@ -1,23 +1,25 @@
-100000	10000	1				# Burn-in, Sample, Skip
-10								# Number of chain
+500000	100000	10				# Burn-in, Sample, Skip
+20								# Number of chain
 SA								# PT: Parallel Tempreing; SA: Simulated Annealing; None: None
 ####################			0: perturbe, 1: fixed, 2: empirical (Brocher, 2005)
-0.0	200.	0.05					# DEPTH
-0.0	6.0	0.05					# VS
+0.0	100.	0.05					# DEPTH
+1.0	6.0	0.05					# VS
+######### XI: NOT YET
 0.9	1.1	0.05	1				# XI	only perturbe or fixed(as 1.0)
-1.7	1.9	0.05	1				# VPVS	if 1, vpvs	= 1.75
-1.0	4.0	0.05	1				# RHO	if 1, rho	= 2.0
+######### XI: NOT YET
+1.7	1.9	0.05	0				# VPVS	if 1, vpvs	= 1.75
+1.0	4.0	0.05	0				# RHO	if 1, rho	= 2.0
 0.05	0.05	0.05	0.05
 3	50
 12345	500
 ####################
 -5	5	0.05
-3
-RGV
-'./99.9091_3.35_gv_2_0.4.txt'
+4
 RPV
-'./99.9091_3.35_pv_2_0.4.txt'
-PRF	2.5	0.069				# data type, Gauss, slowness
-'./RPF'
-
-
+'./long_peri.PV'
+RPV
+'./short_peri.PV'
+PRF	1	0.06306
+'./IKSB_1.PRF'
+PRF	2.5	0.06306
+'./IKSB_2.5.PRF'
