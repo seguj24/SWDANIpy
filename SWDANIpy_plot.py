@@ -53,7 +53,6 @@ results = {}
 for key, chains in _results.items():
     results[key] = [s for c in chains for s in c]
 
-
 # -------------------------
 # Voronoi / Vs samples
 # -------------------------
