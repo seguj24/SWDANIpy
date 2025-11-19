@@ -30,6 +30,8 @@ par = read_par("./Par")
 # dict_keys(['Nchain', 'mcmc', 'priors', 'weights', 'datasets'])
 
 priors = par["priors"]
+
+
 datasets = par["datasets"]
 
 yscale = 'log'
