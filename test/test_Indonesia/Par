@@ -3,7 +3,7 @@
 SA								# PT: Parallel Tempreing; SA: Simulated Annealing; None: None
 ####################			0: perturbe, 1: fixed, 2: empirical (Brocher, 2005)
 0.0	200.	0.05					# DEPTH
-0.0	4.5	0.05					# VS
+0.0	6.0	0.05					# VS
 0.9	1.1	0.05	1				# XI	only perturbe or fixed(as 1.0)
 1.7	1.9	0.05	1				# VPVS	if 1, vpvs	= 1.75
 1.0	4.0	0.05	1				# RHO	if 1, rho	= 2.0
