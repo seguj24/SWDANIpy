@@ -1,0 +1,19 @@
+### PARAMETERS ###
+Ncore                    : 10
+Sampler                  : SA
+Burnin                   : 100000
+Sample                   : 10000
+Skip                     : 1
+No.Data                  : 2
+  [01] RGV01             : 99.9091_3.35_gv_2_0.4.txt
+  [02] RPV01             : 99.9091_3.35_pv_2_0.4.txt
+
+### Priors ###
+Depth (zmin, zmax, dz)   : 0.0, 200.0, 0.05
+Vs (vsmin, vsmax, dvs)   : 0.0, 4.5, 0.05
+Vs transD                : 0.05
+No.Layer (nvmin, nvmax)  : 3, 50
+Rand (seed, rmul)        : 12345.0, 500.0
+
+### Weights ###
+w0, w1, dw               : -5.0, 5.0, 0.05
