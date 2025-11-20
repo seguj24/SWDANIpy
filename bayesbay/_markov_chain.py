@@ -159,20 +159,32 @@ class BaseMarkovChain:
         self._statistics["n_proposed_models_total"] += 1
         self._statistics["n_accepted_models_total"] += 1 if accepted else 0
 
+
     def print_statistics(self):
         """print the statistics about the Markov Chain history, including the number of
         explored and accepted states for each perturbation, acceptance rates and the
         current temperature
         """
+        
         Nmodel          = self.statistics["n_proposed_models_total"]
         cid             = self.id
         temp            = self._temperature
-        misfit, log_det = self.log_likelihood._get_misfit_and_det(self.current_state)
+        nvoro           = self.current_state["voronoi"].n_dimensions
 
-        N = sum(len(target.dobs) for target in self.log_likelihood.targets)
-        loglike = -0.5 * (misfit + log_det + N * math.log(2 * math.pi))
-        #print(f"Nmodel: {explored_models}\tcid: {chain_id}\ttemp: {temperature}\tloglike: {loglike}")
-        print(f"ITER: {Nmodel}\tCID: {cid}\tloglike: {loglike}\tTEMP: {temp}")
+
+        if "logLikelihood" in self.current_state.cache:
+            loglike = self.current_state.cache["logLikelihood"]
+        else:
+            misfit, log_det = self.log_likelihood._get_misfit_and_det(self.current_state)
+            N = sum(len(target.dobs) for target in self.log_likelihood.targets)
+            loglike = -0.5 * (misfit + log_det + N * math.log(2 * math.pi))      
+            
+        print(f"ITER: {Nmodel}\tCID: {cid}\tLOGLIKE: {loglike:.4f}\tNVORO: {nvoro}\tTEMP: {temp:.4f}")
+        print(f"ITER: {Nmodel}\tCID: {cid}\tLOGLIKE: {loglike:.4f}\tNVORO: {nvoro}\tTEMP: {temp:.4f}",
+                file=open("./OUT/loglike.log", "a"), flush=True)
+        
+        
+        
 ################## ORIGINAL CODE ###################
         # head = f"Chain ID: {self.id}"
         # head += f"\nTEMPERATURE: {self.temperature}"

@@ -33,7 +33,7 @@ print(">>> Bayesbay version > 0.3.6")
 print(f">>> Start time : {time.ctime(starttime)}")
 
 
-custom_logL = False    
+custom_logL = True    
 # Ref. "./code_utils/likelihood.py"
 custum_vs_prior = False
 # Ref. "./code_utils/custom_prior.py"
@@ -43,7 +43,6 @@ custum_vs_prior = False
 ####################
 par = read_par("./Par")
 # Ref. "./code_utils/read_par.py"
-# dict_keys(['Nchain', 'mcmc', 'Sampler', 'priors', 'weights', 'datasets'])
 
 # par =  {
 #     "Nchain": Ncore,
@@ -63,12 +62,9 @@ par = read_par("./Par")
 #     "datasets": datasets,
 #     }
 
-
-
 ####################
 # parameterization
 ####################
-
 burnin, sample, skip = int(par["mcmc"]["burnin"]), int(par["mcmc"]["sample"]), int(par["mcmc"]["skip"])
 Niter = burnin + sample
 Ncore = int(par["Nchain"])
@@ -98,15 +94,12 @@ vpvs_sw                 = switch["vpvs"]
 xi_sw                   = switch["xi"]
 rho_sw                  = switch["rho"]
 
+# PT: Parallel Tempreing, SA: Simulated Annealing, None: None
 sampler_type            = par["sampler"]
-# PT: Parallel Tempreing
-# SA: Simulated Annealing
-# None: None
 if Ncore == 1 and sampler_type == "PT":
     print(f">>> Chains={Ncore}, Sampler={sampler_type}")
     print(">>> Parallel Tempering needs >1 chain.")
     print(">>> Switching to Simulated Annealing.")  
-
 
 os.makedirs("./OUT", exist_ok=True)
 logfile = "./OUT/Par.log"
@@ -127,17 +120,18 @@ for i, ds in enumerate(datasets, 1):
     both(f"  [{i:02d}] {ds['type']}             : {ds['file']}")
     
 both("\n### Priors ###")
-both(f"Depth (zmin, zmax, dz)   : {zmin}, {zmax}, {dz}")
-both(f"Vs (vsmin, vsmax, dvs)   : {vsmin}, {vsmax}, {dvs}")
-# both(f"Vs transD                : {vs_transd}")
+both(f"DEPTH (min, max, delta)  : {zmin}, {zmax}, {dz}")
+both(f"VS (min, max, delta)     : {vsmin}, {vsmax}, {dvs}")
+both(f"VPVS (min, max, delta)   : {vpvsmin}, {vpvsmax}, {dvpvs}")
+both(f"RHO (min, max, delta)    : {rhomin}, {rhomax}, {drho}")        
+both(f"TransD (VS, VPVS, RHO)   : {vs_transd}, {vpvs_transd}, {rho_transd}")
 both(f"No.Layer (nvmin, nvmax)  : {nvmin}, {nvmax}")
-both(f"Rand (seed, rmul)        : {rand_seed}, {rand_rmul}")
+# both(f"Rand (seed, rmul)        : {rand_seed}, {rand_rmul}")
 
 both("\n### Weights ###")
 both(f"w0, w1, dw               : {w0}, {w1}, {dw}")
 
 log.close()
-
 
 ###################
 # Custom prior
@@ -172,7 +166,9 @@ voronoi = Voronoi1D(
 
 param_spaces = [voronoi]
 
+####################
 # Prior range for DATA WEIGHT
+####################
 for ds in datasets:
     name = ds["type"]   # e.g., RPV01, RGV01
     w_space = ParameterSpace(
@@ -184,6 +180,9 @@ for ds in datasets:
 
 parameterization = Parameterization(param_spaces)
 
+####################
+# Log-Likelihood function
+####################
 if custom_logL:
     _Hi_loglike = partial(Hi_loglike, datasets=datasets)
     log_likelihood = LogLikelihood(log_like_func=_Hi_loglike)

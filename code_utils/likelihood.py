@@ -65,6 +65,7 @@ def Hi_loglike(state, datasets):
         dpred = forward(state)
         state.cache[f"{name}.dpred"] = dpred
         
+        
         if len(obs0) != len(dpred):
             logL=-1e30
             return logL
@@ -87,15 +88,6 @@ def Hi_loglike(state, datasets):
             + logdet_scaled
             + quad
             )
-        
-        # var_scaled = scale_factor * var0
-        # var_scaled = np.maximum(var_scaled, 1e-20)
-        
-        # logL = -0.5 * (
-        #     Ndat * np.log(2.0 * np.pi)
-        #     + np.sum(np.log(var_scaled))
-        #     + np.sum(resi ** 2 / var_scaled)
-        #     )
 
 
         
