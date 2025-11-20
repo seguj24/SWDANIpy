@@ -35,7 +35,7 @@ print(f">>> Start time : {time.ctime(starttime)}")
 
 custom_logL = True    
 # Ref. "./code_utils/likelihood.py"
-custum_vs_prior = False
+custum_vs_prior = True
 # Ref. "./code_utils/custom_prior.py"
 
 ####################
