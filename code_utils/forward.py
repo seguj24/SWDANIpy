@@ -60,7 +60,7 @@ def forward_PVswd(state, dperi, prior_switches, wave='rayleigh', mode=0):
     pv_pred = pd(dperi, mode=mode, wave=wave).velocity
     
     if len(dperi) != len(pv_pred):
-        pv_pred = np.full(len(dperi), 1e+99, dtype=float)    
+        pv_pred = np.full(len(dperi), -1e+99, dtype=float)    
     
     return pv_pred
 
@@ -80,7 +80,7 @@ def forward_GVswd(state, dperi, prior_switches, wave='rayleigh', mode=0):
         # If the proposed model cannot generate predictions across the full
         # requested period range, fill with a very small value so that the
         # log-likelihood becomes extremely small (penalizing the model).
-        gv_pred = np.full(len(dperi), 1e+99, dtype=float)    
+        gv_pred = np.full(len(dperi), -1e+99, dtype=float)    
         
     return gv_pred
 
@@ -103,7 +103,7 @@ def forward_ell(state, dperi, prior_switches, wave='rayleigh', mode=0):
     """
     el_pred = np.abs(ell(dperi, mode=mode).ellipticity)
     if len(dperi) != len(el_pred):
-        el_pred = np.full(len(dperi), 1e+99, dtype=float)    
+        el_pred = np.full(len(dperi), -1e+99, dtype=float)    
     # print("LEN dperi:", len(dperi), "LEN d_pred:", len(el_pred))
 
     return el_pred
@@ -120,7 +120,7 @@ def forward_rf(state, dtime, slowness, gauss, prior_switches):
     rf_pred = pyhk.rfcalc(ps=0, thik=thk, beta=vs, kapa=vpvs, p=slowness, duration=tdur, dt=tintv, shft=tsft, gauss=gauss)
     
     if len(dtime) != len(rf_pred):
-        rf_pred = np.full(len(dtime), 1e+99, dtype=float)    
+        rf_pred = np.full(len(dtime), -1e+99, dtype=float)    
     
     return rf_pred
 
