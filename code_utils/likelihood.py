@@ -9,7 +9,7 @@ Created on Thu Nov 13 10:20:03 2025
 import numpy as np
 
 from bayesbay import Target
-
+from forward import get_model_property
 
 def _get_target_forward(datasets, weight):
 
@@ -42,8 +42,23 @@ def _get_target_forward(datasets, weight):
 
 
 # logL_trace = []   # 전역 리스트
-def Hi_loglike(state, datasets):
+def Hi_loglike(state, datasets, prior_switches):
+    # thk, vs, vp, rho = get_model_property(state, prior_switches)
     
+    # if not np.all(np.diff(vs) > 0):
+    #     logL_total = -1e99
+    #     state.cache["logLikelihood"] = logL_total
+    #     return logL_total
+    
+    # # Save model on cache (for test)
+    # # state.save_to_extra_storage("Model", {"thickness": thk, "vs": vs, "vpvs": vp/vs, "rho": rho})
+    
+    # state.save_to_extra_storage("Model.thickness", thk)
+    # state.save_to_extra_storage("Model.vs",        vs)
+    # state.save_to_extra_storage("Model.vpvs",      vp/vs)
+    # state.save_to_extra_storage("Model.rho",       rho)
+    
+
     # BAD = 1e9
     logL_total = 0.0
 
@@ -64,7 +79,7 @@ def Hi_loglike(state, datasets):
         
         dpred = forward(state)
         state.cache[f"{name}.dpred"] = dpred
-        
+
         
         if len(obs0) != len(dpred):
             logL=-1e30
@@ -88,14 +103,13 @@ def Hi_loglike(state, datasets):
             + logdet_scaled
             + quad
             )
-
-
         
         if not np.isfinite(logL):
             return -1e30
         
         logL_total += logL
     
+
     state.cache["logLikelihood"] = logL_total
     # logL_trace.append(logL_total)
     return logL_total

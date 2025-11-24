@@ -6,6 +6,8 @@ import random
 from .._state import State, ParameterSpaceState
 from ._base_perturbation import Perturbation, ParamSpaceMixin
 
+import numpy as np
+
 
 class ParamSpacePerturbation(Perturbation, ParamSpaceMixin):
     def __init__(
@@ -75,20 +77,51 @@ class ParamSpacePerturbation(Perturbation, ParamSpaceMixin):
         new_state.save_to_cache("perturb_stats", stats)
         return new_state, log_prob_ratio
 
+
     def perturb_param_space_state(
         self, ps_state: ParameterSpaceState
     ) -> Tuple[ParameterSpaceState, Number, str]:
         while True:
-            # randomly choose a perturbation function for the current ps_state
+            # 1) 기존 코드: perturb 함수 하나 선택
             i_perturb = random.choices(
                 range(len(self.perturbation_funcs)), self.perturbation_weights
             )[0]
             perturb_func = self.perturbation_funcs[i_perturb]
-            # perturb and get the log of the partial acceptance probability
+    
+            # 2) 기존 코드: ps_state 하나를 perturb
             new_ps_state, log_prob_ratio = perturb_func.perturb_param_space_state(
-                    ps_state
-                    )
+                ps_state
+            )
+    
+            # 3) 여기서 “vs 단조 증가” 조건 검사
+            #   - param_space_name 이 voronoi 인 경우에만 체크한다고 가정
+            if self.param_space_name == "voronoi":
+                vs = np.asarray(new_ps_state["vs"])
+                if not np.all(np.diff(vs) > 0):
+                    # 단조 증가가 아니면 while 루프 맨 위로 돌아가서
+                    # 다시 다른 perturb 또는 같은 perturb 재시도
+                    continue
+    
+            # 4) 조건 통과 시에만 반환
             return new_ps_state, log_prob_ratio, perturb_func.__name__
+        
+        
+########################################## ORIGINAL CODE
+    # def perturb_param_space_state(
+    #     self, ps_state: ParameterSpaceState
+    # ) -> Tuple[ParameterSpaceState, Number, str]:
+    #     while True:
+    #         # randomly choose a perturbation function for the current ps_state
+    #         i_perturb = random.choices(
+    #             range(len(self.perturbation_funcs)), self.perturbation_weights
+    #         )[0]
+    #         perturb_func = self.perturbation_funcs[i_perturb]
+    #         # perturb and get the log of the partial acceptance probability
+    #         new_ps_state, log_prob_ratio = perturb_func.perturb_param_space_state(
+    #                 ps_state
+    #                 )
+    #         return new_ps_state, log_prob_ratio, perturb_func.__name__
+########################################## ORIGINAL CODE
 
     @property
     def perturbation_funcs(self) -> List[Perturbation]:

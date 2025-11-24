@@ -2,3 +2,6 @@ OUT/
 */OUT/
 */*/OUT/
 
+# macOS metadata (dummy) files
+._*
+.DS_Store

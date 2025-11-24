@@ -33,9 +33,9 @@ print(">>> Bayesbay version > 0.3.6")
 print(f">>> Start time : {time.ctime(starttime)}")
 
 
-custom_logL = True    
+custom_logL = True
 # Ref. "./code_utils/likelihood.py"
-custum_vs_prior = True
+custum_vs_prior = False
 # Ref. "./code_utils/custom_prior.py"
 
 ####################
@@ -94,6 +94,7 @@ vpvs_sw                 = switch["vpvs"]
 xi_sw                   = switch["xi"]
 rho_sw                  = switch["rho"]
 
+prior_switches = {"xi": xi_sw, "vpvs": vpvs_sw, "rho": rho_sw}
 # PT: Parallel Tempreing, SA: Simulated Annealing, None: None
 sampler_type            = par["sampler"]
 if Ncore == 1 and sampler_type == "PT":
@@ -117,7 +118,7 @@ both(f"Sample                   : {sample}")
 both(f"Skip                     : {skip}")
 both(f"No.Data                  : {Ndat}")
 for i, ds in enumerate(datasets, 1):
-    both(f"  [{i:02d}] {ds['type']}             : {ds['file']}")
+    both(f"  [{i:02d}] {ds['type']}            : {ds['file']}")
     
 both("\n### Priors ###")
 both(f"DEPTH (min, max, delta)  : {zmin}, {zmax}, {dz}")
@@ -184,7 +185,7 @@ parameterization = Parameterization(param_spaces)
 # Log-Likelihood function
 ####################
 if custom_logL:
-    _Hi_loglike = partial(Hi_loglike, datasets=datasets)
+    _Hi_loglike = partial(Hi_loglike, datasets=datasets, prior_switches=prior_switches)
     log_likelihood = LogLikelihood(log_like_func=_Hi_loglike)
 
 else:

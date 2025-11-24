@@ -40,7 +40,6 @@ priors = par["priors"]
 weights = par['weights']
 datasets = par["datasets"]
 
-
 ####################
 # Parameters
 ####################
@@ -65,7 +64,6 @@ results = {}
 for key, chains in _results.items():
     results[key] = [s for c in chains for s in c]
     
-    
 ####################
 # Voronoi / Vs samples
 ####################
@@ -83,7 +81,6 @@ vss   = results['voronoi.vs']              # list of vs arrays
 # Thickness to Depth
 thks_list  = [Voronoi1D.compute_cell_extents(n) for n in voros]
 zbot_list  = [np.cumsum(thk) for thk in thks_list]
-
 
 # Stair-like VS Profile
 Nsamples = len(vss)
@@ -110,7 +107,6 @@ for i in range(Nsamples):
 
 # hvprob = hvcount / hvcount.max()
 hvprob = hvcount / hvcount.max(axis=1, keepdims=True).clip(min=1)
-
 
 fig, ax = plt.subplots(figsize=(3,3), dpi=300)
 
@@ -158,7 +154,6 @@ if is_ipython:
     fig.show()
 else:
     plt.close(fig)  
-    
     
 ####################
 # Interface PDF
@@ -275,15 +270,13 @@ for ax, dtype in zip(axes, types):
 cbar = fig.colorbar(global_pcm, cax=cbar_ax, orientation="horizontal")
 cbar.set_label("Normalized density")
 
-plt.tight_layout(rect=[0, 0.07, 1, 1])  # 하단 컬러바 공간 확보
+# plt.tight_layout(rect=[0, 0.07, 1, 1])  # 하단 컬러바 공간 확보
 plt.savefig("./figure/PPD_predicted.png", dpi=300)
 
 if is_ipython:
     fig.show()
 else:
     plt.close(fig)  
-
-
 
 ####################
 # Data Weight
@@ -311,7 +304,7 @@ for ax, key in zip(axes, w_keys):
     x = np.linspace(x_min - margin, x_max + margin, 400)
     pdf = kde(x)
 # Normalization 
-    pdf /= np.trapz(pdf, x)
+    # pdf /= np.trapz(pdf, x)
     # pdf /= pdf.max()
     
     ax.plot(x, pdf, lw=1.5)

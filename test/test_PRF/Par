@@ -1,4 +1,4 @@
-1000000	100000	100				# Burn-in, Sample, Skip
+10000	10000	100				# Burn-in, Sample, Skip
 20								# Number of chain
 PT								# PT: Parallel Tempreing; SA: Simulated Annealing; None: None
 ####################			0: perturbe, 1: fixed, 2: empirical (Brocher, 2005)
